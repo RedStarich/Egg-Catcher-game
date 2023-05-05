@@ -1,4 +1,5 @@
 from pygame import *
+import run
 
 
 init()
@@ -34,7 +35,7 @@ class Menu:
             surf.blit(option, option_rect)
 
 menu = Menu()
-menu.append_option('Start the game', print)
+menu.append_option('Start the game', run.win.mainloop)
 menu.append_option('Quit', quit)
 
 

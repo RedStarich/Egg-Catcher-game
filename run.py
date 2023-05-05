@@ -12,6 +12,9 @@ c.create_rectangle(-5, canvas_height - 100, canvas_width +5, canvas_height+5, fi
 c.create_oval(-80,-80,120,120,fill='orange', width=0)
 c.pack()
 
+img = Tk.PhotoImage(file="wolf.png")
+sprite = c.create_image(200,200, ancor=Tk.NW, image=img)
+
 
 color_cycle = cycle(['light blue', 'light pink', 'light yellow', 'light green', 'red', 'blue', 'green'])
 egg_width = 45

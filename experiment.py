@@ -1,93 +1,114 @@
-import pygame
-import random
+from pygame import *
 
-# Set up the game window
-canvas_width = 800
-canvas_height = 400
-pygame.init()
-win = pygame.display.set_mode((canvas_width, canvas_height))
-pygame.display.set_caption("Egg Catcher")
-clock = pygame.time.Clock()
+# Initialize Pygame
+init()
 
-# Set up game variables
-color_cycle = iter([(173, 216, 230), (255, 182, 193), (255, 255, 224), (144, 238, 144), (255, 0, 0), (0, 0, 255), (0, 128, 0)])
-egg_width = 45
-egg_height = 55
-egg_score = 10
-egg_speed = 500
-egg_interval = 4000
-difficulty_factor = 0.95
-catcher_color = (0, 0, 255)
-catcher_width = 100
-catcher_height = 100
-catcher_start_x = canvas_width/2 - catcher_width/2
-catcher_start_x2 = catcher_start_x + catcher_width
-catcher_start_y = canvas_height - catcher_height - 20
-catcher_start_y2 = catcher_start_y + catcher_height
-score = 0
-lives_remaining = 3
+# Set the window size
+size = (800, 600)
 
-# Set up game font
-game_font = pygame.font.SysFont('FixedFont', 18)
+# Create the screen
+screen = display.set_mode(size)
 
-# Create catcher
-catcher_rect = pygame.draw.arc(win, catcher_color, (catcher_start_x, catcher_start_y, catcher_width, catcher_height), 3.49, 6.08, 3)
+# Load the font
+ARIAL_50 = font.SysFont('arial', 50)
 
-# Create score and lives text
-score_text = game_font.render("Score: " + str(score), True, (0, 0, 139))
-lives_text = game_font.render("Lives: " + str(lives_remaining), True, (0, 0, 139))
+# Define the menu class
+class Menu:
+    def __init__(self):
+        self._option_surfaces = []
+        self._callbacks = []
+        self._current_option_index = 0
 
-# Create eggs list
-eggs = []
+    def append_option(self, option, callback):
+        self._option_surfaces.append(ARIAL_50.render(option, True, (255, 255, 255)))
+        self._callbacks.append(callback)
 
-# Define game functions
-def create_egg():
-    x = random.randint(10, 740)
-    y = 40
-    new_egg = pygame.draw.ellipse(win, next(color_cycle), (x, y, egg_width, egg_height))
-    eggs.append(new_egg)
-    pygame.time.set_timer(pygame.USEREVENT, egg_interval)
-
-def move_eggs():
-    global lives_remaining
-    for egg in eggs:
-        egg.move_ip(0, 10)
-        if egg.bottom > canvas_height:
-            eggs.remove(egg)
-            lose_a_life()
-            if lives_remaining == 0:
-                game_over()
-    pygame.time.set_timer(pygame.USEREVENT+1, egg_speed)
-
-def lose_a_life():
-    global lives_remaining, lives_text
-    lives_remaining -= 1
-    lives_text = game_font.render("Lives: " + str(lives_remaining), True, (0, 0, 139))
-
-def check_catch():
-    global score, egg_speed, egg_interval
-    for egg in eggs:
-        if catcher_rect.colliderect(egg):
-            eggs.remove(egg)
-            increase_score(egg_score)
-            pygame.display.update()
-    pygame.time.set_timer(pygame.USEREVENT+2, 100)
-
-def increase_score(points):
-    global score, score_text, egg_speed, egg_interval
-    score += points
-    score_text = game_font.render("Score: " + str(score), True, (0, 0, 139))
-    egg_speed = int(egg_speed * difficulty_factor)
-    egg_interval = int(egg_interval * difficulty_factor)
-
-def game_over():
-    global score
-    game_over_text = game_font.render("Game Over! Final Score: " + str(score), True, (0, 0, 139))
-    win.blit(game_over_text, (canvas_width/2 - game_over_text.get_width()/2, canvas_height/2 - game_over_text.get_height()/2))
-    pygame.display.update()
-    pygame.time.delay(2000)
-    pygame.quit()
-    quit()
+    def switch(self, direction):
+        self._current_option_index = max(0, min(self._current_option_index + direction, len(self._option_surfaces)-1))
 
 
-game_over()
+    def select(self):
+        self._callbacks[self._current_option_index]()
+
+    def draw(self, surf, x, y, option_y_padding):
+        for i, option in enumerate(self._option_surfaces):
+            option_rect = option.get_rect()
+            option_rect.topleft = (x, y+i * option_y_padding)
+            if i == self._current_option_index:
+                draw.rect(surf, (0, 100, 0), option_rect)
+            surf.blit(option, option_rect)
+
+# Define the game class
+class Game:
+    def __init__(self):
+        self.score = 0
+        self.game_over = False
+
+    def handle_events(pygame, game):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                game.running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_LEFT:
+                    game.move_left()
+                elif event.key == pygame.K_RIGHT:
+                    game.move_right()
+
+    def update(game):
+        if game.state == "playing":
+            game.update_objects()
+            game.check_collisions()
+            game.spawn_objects()
+
+
+    def draw(game, pygame):
+        game.screen.fill((255, 255, 255))
+        if game.state == "menu":
+            game.draw_menu()
+        elif game.state == "playing":
+            game.draw_objects()
+            game.draw_score()
+        pygame.display.update()
+
+# Create instances of the Menu and Game classes
+menu = Menu()
+menu.append_option('Start the game', Game)
+menu.append_option('Quit', quit)
+
+game = None
+
+# Main game loop
+running = True
+while running:
+
+    for event in event.get():
+        if event.type == QUIT:
+            running = False
+        elif event.type == KEYDOWN:
+            if event.key == K_w:
+                menu.switch(-1)
+            elif event.key == K_s:
+                menu.switch(1)
+            elif event.key == K_SPACE:
+                menu.select()
+
+    screen.fill((0, 0, 0))
+
+    if game is None:
+        # Show the menu if no game is active
+        menu.draw(screen, 100, 100, 75)
+    else:
+        # Otherwise, update and draw the game
+        game.handle_events()
+        game.update()
+        game.draw(screen)
+
+    # Update the display
+    display.flip()
+
+    # Start the game if the "Start the game" option is selected
+    if menu._current_option_index == 0 and game is None:
+        game = Game()
+
+# Quit Pygame
+quit()
